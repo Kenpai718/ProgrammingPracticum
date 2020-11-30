@@ -1,0 +1,339 @@
+package tests;
+
+import static org.junit.Assert.*;
+
+import java.math.BigDecimal;
+
+import org.junit.Before;
+import org.junit.Test;
+
+import model.Cart;
+import model.Item;
+import model.ItemOrder;
+
+/**
+ * JUNIT4 Testing for Cart class
+ * 
+ * @author Kenneth Ahrens
+ * @version Fall 2020
+ */
+public class CartTest {
+
+	// test constants for items
+	final static Item I1 = new Item("Potion", new BigDecimal("3.00"));
+	final static Item I2 = new Item("Repel", new BigDecimal("4.00"), 2,
+			new BigDecimal("6.00"));
+	final static Item I3 = new Item("Pokeball", new BigDecimal("2.00"), 10,
+			new BigDecimal("15.00"));
+
+	// test constants for ItemOrders
+	final static ItemOrder O1 = new ItemOrder(I1, 5); // price = 15, single
+														// order example
+	final static ItemOrder O2 = new ItemOrder(I2, 2); // price = bulk quantity
+														// example
+	final static ItemOrder O3 = new ItemOrder(I3, 12); // price = 15 + 4 = 19,
+														// bulk quantity with
+														// extras example
+	// instance fields for cart testing
+	private Cart myEmptyCart;
+	private Cart myOneCartOrder;
+	private Cart myNormalCart;
+	private Cart myMemberCart;
+
+	@Before
+	public void setUp() throws Exception {
+		// empty cart setup, also testing constructor
+		myEmptyCart = new Cart();
+
+		// normal cart setup
+		myNormalCart = new Cart();
+		myNormalCart.add(O1);
+		myNormalCart.add(O2);
+		myNormalCart.add(O3);
+
+		// 1 cart item
+		myOneCartOrder = new Cart();
+		myOneCartOrder.add(O1);
+
+		// membership cart with discount
+		myMemberCart = new Cart();
+		myMemberCart.setMembership(true);
+		myMemberCart.add(O1);
+		myMemberCart.add(O2);
+		myMemberCart.add(O3);
+
+	}
+
+	@Test(expected = NullPointerException.class)
+	public void testAddNullItemOrder() {
+		ItemOrder nullOrder = new ItemOrder(null, 5);
+		Cart testCart = new Cart();
+		testCart.add(nullOrder);
+	}
+
+	/**
+	 * Test of adding 3 items to cart
+	 */
+	@Test
+	public void testAdd() {
+		// test adding 3 same items and see if it matches
+		Cart testCart = new Cart();
+		testCart.add(O1);
+		testCart.add(O2);
+		testCart.add(O3);
+
+		assertEquals("Add method not adding items to cart correctly.",
+				testCart.toString(), myNormalCart.toString());
+
+	}
+
+	/**
+	 * Test of adding an exisiting quantity for an item
+	 */
+	@Test
+	public void testAddExistingOrderNewQuantity() {
+		Cart testCart = new Cart();
+		testCart.add(O1);
+
+		ItemOrder changedO1 = new ItemOrder(I1, 10);
+		testCart.add(changedO1);
+
+		// note: 01 originally only ordered 5 "I1"
+		// myOneCartOrder had the same original item order as testCart
+		// testCart had quantities changed so the prices should be different
+		// between 2 carts
+
+		assertNotEquals("Add method did not replace an existing order in cart.",
+				testCart.toString(), myOneCartOrder.toString());
+
+		// System.out.println(myOneCartOrder.toString());
+		// System.out.println(testCart.toString());
+
+	}
+
+	/**
+	 * Test setting membership to true gives discount
+	 */
+	@Test
+	public void testSetMembership() {
+		// if membership is set to true, then it will have a discount
+		Item testItem = new Item("Pikachu", new BigDecimal("6.00"), 2,
+				new BigDecimal("10.00"));
+		ItemOrder testOrder = new ItemOrder(testItem, 2);
+
+		Cart testCart = new Cart();
+		testCart.setMembership(true);
+		testCart.add(testOrder);
+
+		Cart testCartNoDiscount = new Cart();
+		testCartNoDiscount.add(testOrder);
+
+		// if membership is true then the discount should be present
+		// System.out.println(testCart.toString());
+		// System.out.println(testCartNoDiscount.toString());
+
+		assertNotEquals("setMembership is not setting to true!",
+				testCart.toString(), testCartNoDiscount.toString());
+
+	}
+
+	/**
+	 * Test setMembership updates cart
+	 */
+	@Test
+	public void testSetMembershipReplacesPrices() {
+		// this method is testing if prices are given a discount if items are
+		// already in cart after applying membership
+
+		// if membership is set to true, then it will have a discount
+		Item testItem = new Item("Pikachu", new BigDecimal("6.00"), 2,
+				new BigDecimal("10.00"));
+		ItemOrder testOrder = new ItemOrder(testItem, 2);
+
+		Cart testCart = new Cart();
+
+		testCart.add(testOrder);
+		testCart.setMembership(true);
+		// membership has been set after adding an order
+		// if it is set up correctly the bulk discount will be applied and the
+		// price will be $10 with discount instead of $12
+
+		BigDecimal correctPrice = new BigDecimal("10.00");
+		// System.out.println(testCart.calculateTotal());
+
+		assertEquals(
+				"setMembership is not changing existing orders to member discount!",
+				correctPrice, testCart.calculateTotal());
+
+	}
+
+	/**
+	 * Test for correct total for one item no discount
+	 */
+	@Test
+	public void testCalculateTotalOneOrderCart() {
+		// note: testing calculateTotal() technically tests the private
+		// calculateOrderPrice() as well
+
+		// one order cart has 1 item (I1), and the quantity is 5
+		// Item I1 = new Item("Potion", new BigDecimal("3.00"));
+		// total should be $3*5 = $15
+
+		BigDecimal total = new BigDecimal("15.00");
+		assertEquals("Total for one item not calculated correctly.", total,
+				myOneCartOrder.calculateTotal());
+
+	}
+
+	/**
+	 * Test for correct total for empty cart
+	 */
+	@Test
+	public void testCalculateTotalEmptyCart() {
+
+		// nothing in this cart should just return 0 as total
+		assertEquals("Empty cart is not returning 0 as a total.",
+				new BigDecimal("0.00"), myEmptyCart.calculateTotal());
+
+	}
+
+	/**
+	 * Test for correct total for a bulk item but not enough quantity ordered
+	 * for a discount
+	 */
+	@Test
+	public void testCalculateTotalBulkButNotEnoughQuantity() {
+		// for example, ordering an item that is bulk, but is not enough
+		// quantity ordered so charge single price
+
+		// Item I3 = new Item("Pokeball", new BigDecimal("2.00"), 10,new
+		// BigDecimal("15.00"));
+
+		Cart testCart = new Cart();
+		testCart.setMembership(true);
+		ItemOrder testOrder = new ItemOrder(I3, 5);
+		testCart.add(testOrder);
+		// you need to buy 10 for a bulk discount
+		// 5 < 10 so no discount
+		// total = 2*5 = 10
+
+		BigDecimal correctTotal = new BigDecimal("10.00");
+		assertEquals("calculateTotal is not giving a correct nonmember price.",
+				correctTotal, testCart.calculateTotal());
+	}
+
+	/**
+	 * Test for correct total for a cart with items but no discount
+	 */
+	@Test
+	public void testCalculateTotalNormalCart() {
+
+		// Item I1 = new Item("Potion", new BigDecimal("3.00"));
+		// Item I2 = new Item("Repel", new BigDecimal("4.00"), 2, new
+		// BigDecimal("6.00"));
+		// Item I3 = new Item("Pokeball", new BigDecimal("2.00"), 10,new
+		// BigDecimal("15.00"));
+
+		// normal cart has all 3 items, but wont get bulk discount.
+		// order quantity for I1 = 5, I2 = 2, I3 = 12
+		// order prices should be: O1 = $3*5 = 15, O2 = $4*2 = $8, O3 = $2*12 =
+		// $24
+		// total should be $15 + $8 + $24 = $47
+
+		BigDecimal correctTotal = new BigDecimal("47.00");
+		assertEquals("calculateTotal is not giving a correct nonmember price.",
+				correctTotal, myNormalCart.calculateTotal());
+	}
+
+	/**
+	 * Test for correct total for cart with items and a bulk member discount
+	 */
+	@Test
+	public void testCalculateTotalMemberCart() {
+
+		// Item I1 = new Item("Potion", new BigDecimal("3.00"));
+		// Item I2 = new Item("Repel", new BigDecimal("4.00"), 2, new
+		// BigDecimal("6.00"));
+		// Item I3 = new Item("Pokeball", new BigDecimal("2.00"), 10,new
+		// BigDecimal("15.00"));
+
+		// member cart has all 3 items, but has bulk discount.
+		// order quantity for I1 = 5, I2 = 2, I3 = 12
+		// order prices should be: O1 = $3*5 = 15, O2 = (bulk quantity 1) $6 ,
+		// O3 = (bulk quantity 1 and 2 leftover) $15 + ($2*2) = $19
+		// total should be $15 + $6 + $19 = $40
+
+		BigDecimal correctTotal = new BigDecimal("40.00");
+		assertEquals("calculateTotal is not giving a correct member price.",
+				correctTotal, myMemberCart.calculateTotal());
+
+	}
+
+	/**
+	 * Test clearing the cart
+	 */
+	@Test
+	public void testClear() {
+		Cart testCart = new Cart();
+		testCart.add(O1);
+		testCart.clear();
+
+		assertEquals("Cart was not cleared properly.", testCart.toString(),
+				myEmptyCart.toString());
+
+	}
+
+	/**
+	 * Test for correct cart size with items in it
+	 */
+	@Test
+	public void testGetCartSize() {
+		// size of myNormalCart should return 3
+		assertEquals("getCartSize() does not return the correct cart size.", 3,
+				myNormalCart.getCartSize());
+
+	}
+
+	/**
+	 * Test for correct cart size with nothing in it
+	 */
+	@Test
+	public void testGetCartSize0() {
+
+		// size of myEmptyCart should return 0
+		assertEquals("getCartSize() does not consider an empty cart size.", 0,
+				myEmptyCart.getCartSize());
+
+	}
+
+	/**
+	 * Test for correct toString formatting
+	 */
+	@Test
+	public void testToString() {
+		// cart toString format below:
+		StringBuilder sb = new StringBuilder();
+		// System.out.println(myOneCartOrder.toString());
+		sb.append("Eligible for bulk discount (is a member) = false\n");
+		sb.append("Cart = \n");
+		sb.append("Items Order(s): \n");
+		sb.append(
+				"Order 1. [Potion, $3.00, Quantity = 5, Price of order(s) = $15.00]\n\n");
+		sb.append("Total of cart: $15.00");
+
+		assertEquals("toString not formating cart correctly.", sb.toString(),
+				myOneCartOrder.toString());
+
+	}
+
+	/*
+	 * @Test public void testingMethod() { Cart testCart = new Cart();
+	 * 
+	 * testCart.add(O1); testCart.add(O2); testCart.add(O3);
+	 * testCart.setMembership(true);
+	 * 
+	 * System.out.println(testCart);
+	 * 
+	 * }
+	 */
+}

@@ -1,0 +1,163 @@
+package model;
+
+/**
+ * Truck subclass of Vehicle for assignment 2 for TCSS 305.
+ * Truck has specific behavior for a vehicle.
+ * 
+ * @author Kenneth Ahrens
+ * @version Fall 2020
+ */
+
+import java.util.Map;
+
+public class Truck extends AbstractVehicle {
+
+	/** Constant death time of this vehicle. */
+	private static final int DEATH_TIME = 0;
+	// 0 since death time is 0 this truck should never die
+
+	/**
+	 * Constructor to initialize all truck fields. Passes its info to
+	 * AbstractVehicle to eliminate redundancy.
+	 * 
+	 */
+	public Truck(final int theX, final int theY, final Direction theDir) {
+		super(theX, theY, theDir, DEATH_TIME);
+	}
+
+	/**
+	 * Returns whether or not this truck may move onto the given type of
+	 * terrain, and considers if it can pass given specific lights.
+	 * 
+	 * A truck can only move through a street, light or crosswalk to pass. Can
+	 * only drive through a crosswalk light when green or yellow. Passes any
+	 * street lights without stopping.
+	 * 
+	 * @param theTerrain The terrain.
+	 * @param theLight   The light color.
+	 * @return whether or not this object may move onto the given type of
+	 *         terrain when the street lights are the given color.
+	 */
+	@Override
+	public boolean canPass(final Terrain theTerrain, final Light theLight) {
+		boolean result = false;
+
+		// has to be a street, light or crosswalk to pass
+		// validTerrain is a helper method to clean up code
+		if (validTerrain(theTerrain)) {
+			result = true;
+
+			// trucks drive through all lights unless the crosswalk is a red
+			// light. Make result false if at a crosswalk and light red.
+			boolean atRedCrosswalkLight = theTerrain == Terrain.CROSSWALK
+					&& (theLight == Light.RED);
+
+			if (atRedCrosswalkLight) {
+				result = false;
+			}
+		}
+
+		return result;
+	}
+
+	/**
+	 * Randomly returns a legal direction this truck would like to move, based
+	 * on the given map of the neighboring terrain. It will randomly go left,
+	 * right, or straight. If it can't go either it reverses.
+	 * 
+	 * Truck will maintain its direction until it can no longer move in that
+	 * direction.
+	 * 
+	 * @param theNeighbors The map of neighboring terrain.
+	 * @return The direction this truck would like to move.
+	 */
+	@Override
+	public Direction chooseDirection(
+			final Map<Direction, Terrain> theNeighbors) {
+
+		// saved copy of the current direction
+		Direction originalDir = getDirection();
+		// direction returned is initially set to random
+		Direction truckDir = Direction.random();
+
+		// check neighbors if there is a valid direction/terrain to move in
+		if (validDirections(theNeighbors)) {
+
+			// terrain of the current random direction
+			Terrain neighborTerrain = theNeighbors.get(truckDir);
+
+			/*
+			 * Randomly chooses a direction until a valid option is chosen also
+			 * ensures it can't be reversed
+			 */
+			while (validTerrain(neighborTerrain) == false
+					|| truckDir == getDirection().reverse()) {
+
+				// randomize direction again
+				truckDir = Direction.random();
+				// change neighbor terrain to the terrain to new dir
+				neighborTerrain = theNeighbors.get(truckDir);
+			}
+
+			// as a last resort truck will reverse its original direction
+		} else {
+			truckDir = originalDir.reverse();
+		}
+		return truckDir;
+	}
+
+	/**
+	 * Helper method for chooseDirection. Checks if the terrain in three
+	 * directions of the truck (left, straight, or right) is allowed to be
+	 * moved through.
+	 * 
+	 * @param theNeighbors The map of the neighboring terrain.
+	 * 
+	 * @return True if the vehicle can move in any of the three possible
+	 *         directions, false otherwise.
+	 */
+	private boolean validDirections(
+			final Map<Direction, Terrain> theNeighbors) {
+
+		boolean result = false;
+		Direction currentDir = getDirection();
+
+		// set variables of terrain in all 3 directions of the current vehicles
+		// direction
+		Terrain terrainToLeft = theNeighbors.get(currentDir.left());
+		Terrain terrainToRight = theNeighbors.get(currentDir.right());
+		Terrain terrainStraight = theNeighbors.get(currentDir);
+
+		// check if vehicle can move either straight, left, or right
+		// return true if any of them are possible
+		if (validTerrain(terrainStraight) || validTerrain(terrainToLeft)
+				|| validTerrain(terrainToRight)) {
+			result = true;
+		}
+
+		return result;
+
+	}
+
+	/**
+	 * Helper method for validDirections and canPass. Checks the passed Terrain
+	 * to see if it is a valid terrain type the truck is allowed to move
+	 * through.
+	 * 
+	 * @param theTerrain The terrain.
+	 * @return True if terrain is valid, false if otherwise.
+	 */
+	private boolean validTerrain(final Terrain theTerrain) {
+
+		// truck can travel only on streets lights and crosswalks
+
+		boolean result = false;
+		if (theTerrain == Terrain.STREET || theTerrain == Terrain.LIGHT
+				|| theTerrain == Terrain.CROSSWALK) {
+			result = true;
+		}
+
+		return result;
+	}
+
+}

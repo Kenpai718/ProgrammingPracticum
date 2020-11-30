@@ -1,0 +1,304 @@
+package model;
+
+/**
+ * AbstractVehicle of assignment 2 for TCSS 305.
+ * All vehicle subclasses will inherit from this superclass.
+ * This class fills out all the methods that make up a vehicle class
+ * and some abstract methods for child class to implement.
+ * 
+ * @author Kenneth Ahrens
+ * @version Fall 2020
+ */
+
+import java.util.Map;
+import java.util.Random;
+import java.util.ArrayList;
+
+public abstract class AbstractVehicle implements Vehicle {
+
+	// random object below in case it's needed for other vehicles
+	// protected final Random RAND = new Random();
+
+	// instance variables below
+
+	/** X coordinate of a vehicle */
+	private int myX;
+	/** Y coordinate of a vehicle */
+	private int myY;
+	/** Current direction of a vehicle */
+	private Direction myDirection;
+
+	/** Status of a vehicle */
+	private boolean myAlive;
+	/** How many turns a vehicle has to go through to revive from death */
+	private final int myDeathTime;
+
+	/** Counter for how many turns a vehicle is dead */
+	protected int myDeathCounter;
+	// Note: myDeathCounter is protected instead of private for testing purposes
+	// in final version myDeathCounter would be made private.
+	// Check getDeathCounter() javadoc in this class for more reasoning.
+
+	/** file name of a vehicle */
+	private final String myImageName;
+	/** Starting X coordinate of a vehicle */
+	private final int myDefaultX;
+	/** Starting X coordinate of a vehicle */
+	private final int myDefaultY;
+	/** Starting directon of a vehicle */
+	private final Direction myDefaultDirection;
+
+	/**
+	 * Constructor to initialize all vehicle fields
+	 */
+	protected AbstractVehicle(final int theX, final int theY,
+			final Direction theDir, final int theDeathTime) {
+
+		myX = theX;
+		myY = theY;
+		myDirection = theDir;
+
+		myImageName = getImageFileName();
+		myDeathCounter = 0;
+		myDeathTime = theDeathTime;
+
+		// setup default values
+		myAlive = true; // true = alive, false = dead
+		myDefaultX = theX;
+		myDefaultY = theY;
+		myDefaultDirection = theDir;
+
+	}
+
+	/**
+	 * Returns whether or not this object may move onto the given type of
+	 * terrain, when the street lights are the given color. Needs to be
+	 * implemented in child class.
+	 * 
+	 * @param theTerrain The terrain.
+	 * @param theLight   The light color.
+	 * @return whether or not this object may move onto the given type of
+	 *         terrain when the street lights are the given color.
+	 */
+	@Override
+	public abstract boolean canPass(Terrain theTerrain, Light theLight);
+
+	/**
+	 * Returns the direction this object would like to move, based on the given
+	 * map of the neighboring terrain. Needs to be implemented in child class.
+	 * 
+	 * @param theNeighbors The map of neighboring terrain.
+	 * @return the direction this object would like to move.
+	 */
+	@Override
+	public abstract Direction chooseDirection(
+			Map<Direction, Terrain> theNeighbors);
+
+	/**
+	 * Returns the number of updates between this vehicle's death and when it
+	 * should be revived.
+	 * 
+	 * @return the number of updates.
+	 */
+	@Override
+	public int getDeathTime() {
+		return myDeathTime;
+	}
+
+	/**
+	 * Called when this Vehicle collides with the specified other Vehicle.
+	 * 
+	 * @param theOther The other object.
+	 */
+	@Override
+	public void collide(final Vehicle theOther) {
+
+		// collission only with 2 alive vehicles
+		if (isAlive() && theOther.isAlive()) {
+
+			// the one with the higher death time will die
+			//unless their death time is 0 which makes them unkillable
+			if ((getDeathTime() > theOther.getDeathTime())
+					&& getDeathTime() != 0) { 
+				myAlive = false;
+			}
+		}
+	}
+
+	/**
+	 * Returns the file name of the image for this Vehicle object, such as
+	 * "car.gif".
+	 * 
+	 * @return the file name.
+	 */
+	@Override
+	public String getImageFileName() {
+		StringBuilder sb = new StringBuilder();
+		sb.append(getClass().getSimpleName().toLowerCase());
+
+		if (isAlive()) {
+			sb.append(".gif");
+		} else {
+			sb.append("_dead.gif");
+		}
+		return sb.toString();
+	}
+
+	/**
+	 * Returns this Vehicle object's direction.
+	 * 
+	 * @return the direction.
+	 */
+	@Override
+	public Direction getDirection() {
+
+		return myDirection;
+	}
+
+	/**
+	 * Returns this Vehicle object's x-coordinate.
+	 * 
+	 * @return the x-coordinate.
+	 */
+	@Override
+	public int getX() {
+
+		return myX;
+	}
+
+	/**
+	 * Returns this Vehicle object's y-coordinate.
+	 * 
+	 * @return the y-coordinate.
+	 */
+	@Override
+	public int getY() {
+
+		return myY;
+	}
+
+	/**
+	 * Returns whether this Vehicle object is alive and should move on the map.
+	 * 
+	 * @return true if the object is alive, false otherwise.
+	 */
+	@Override
+	public boolean isAlive() {
+		return myAlive;
+	}
+
+	/**
+	 * Called by the UI to notify a dead vehicle that 1 movement round has
+	 * passed, so that it will become 1 move closer to revival.
+	 */
+	@Override
+	public void poke() {
+		// poke is only called on a dead
+
+		int reviveTime = getDeathTime();
+
+		if (myDeathCounter != reviveTime) {
+			myDeathCounter++;
+		} else {
+			myDeathCounter = 0;
+			myAlive = true;
+			setDirection(Direction.random());
+		}
+
+	}
+
+	/**
+	 * Moves this vehicle back to its original position.
+	 */
+	@Override
+	public void reset() {
+		myX = myDefaultX;
+		myY = myDefaultY;
+		setDirection(myDefaultDirection);
+		myDeathCounter = 0;
+		myAlive = true;
+
+	}
+
+	/**
+	 * Sets this object's facing direction to the given value.
+	 * 
+	 * @param theDir The new direction.
+	 */
+	@Override
+	public void setDirection(final Direction theDir) {
+		myDirection = theDir;
+
+	}
+
+	/**
+	 * Sets this object's x-coordinate to the given value.
+	 * 
+	 * @param theX The new x-coordinate.
+	 */
+	@Override
+	public void setX(final int theX) {
+		myX = theX;
+
+	}
+
+	/**
+	 * Sets this object's y-coordinate to the given value.
+	 * 
+	 * @param theY The new y-coordinate.
+	 */
+	@Override
+	public void setY(final int theY) {
+		myY = theY;
+
+	}
+
+	/**
+	 * Helper method for debugging purposes in child classes. Mainly just in
+	 * case a subclass wants to override toString and wants this info like Taxi
+	 * class.
+	 * 
+	 * In a final version this method would be deleted or made private.
+	 * 
+	 * @return counter for how many turns its been dead
+	 */
+	protected int getDeathCounter() {
+		return myDeathCounter;
+	}
+
+	/**
+	 * Formats how to represent most vehicle objects in a string. Lists all
+	 * important to know fields and its current status.
+	 * 
+	 * @return String of AbstractVehicle object
+	 */
+	@Override
+	public String toString() {
+		final StringBuilder sb = new StringBuilder();
+
+		String name = getClass().getSimpleName();
+		// name of vehicle object
+		sb.append(name + ", ");
+
+		// cords of vehicle, but commented out since debugger already shows
+		// cords.
+		// sb.append("(" + getX() + "," + getY() + "), ");
+
+		// direction vehicle is currently moving in
+		sb.append(getDirection() + ", ");
+
+		// status based on myAlive state
+		if (isAlive()) {
+			sb.append("Alive. ");
+		} else {
+			sb.append("Dead: ");
+			// tell turns how many turns until it revives
+			sb.append(getDeathCounter() + "/" + getDeathTime());
+			sb.append(" turns until revived.");
+
+		}
+
+		return sb.toString();
+	}
+
+}

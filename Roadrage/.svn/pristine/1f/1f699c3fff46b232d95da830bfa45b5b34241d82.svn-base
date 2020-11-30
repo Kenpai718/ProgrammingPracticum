@@ -1,0 +1,119 @@
+package model;
+
+/**
+ * Car subclass of Vehicle for assignment 2 for TCSS 305.
+ * Car has specific behavior for a vehicle.
+ * 
+ * @author Kenneth Ahrens
+ * @version Fall 2020
+ */
+
+import java.util.Map;
+
+public class Car extends AbstractVehicle {
+
+	/** Constant death time of this vehicle. */
+	private static final int DEATH_TIME = 15;
+
+	/**
+	 * Constructor to initialize all car fields. Passes its info to
+	 * AbstractVehicle to eliminate redundancy.
+	 * 
+	 */
+	public Car(final int theX, final int theY, final Direction theDir) {
+		super(theX, theY, theDir, DEATH_TIME);
+
+	}
+
+	/**
+	 * Returns whether or not this car may move onto the given type of terrain,
+	 * and considers if it can pass when lights are the given color. A car can
+	 * only move through a street, light or crosswalk to pass. Can only drive
+	 * through a crosswalk light when green. Stop for red traffic lights.
+	 * 
+	 * @param theTerrain The terrain.
+	 * @param theLight   The light color.
+	 * @return whether or not this object may move onto the given type of
+	 *         terrain when the street lights are the given color.
+	 */
+	@Override
+	public boolean canPass(final Terrain theTerrain, final Light theLight) {
+
+		boolean result = false;
+
+		// can always pass on a street
+		if (theTerrain == Terrain.STREET) {
+			result = true;
+			// can pass a street light if its yellow or green
+		} else if (theTerrain == Terrain.LIGHT && (theLight != Light.RED)) {
+			result = true;
+
+			// can pass a cross walk when its not red or yellow
+		} else if (theTerrain == Terrain.CROSSWALK && theLight == Light.GREEN) {
+			result = true;
+		}
+
+		return result;
+
+	}
+
+	/**
+	 * Returns the direction this car would like to move, based on the given map
+	 * of the neighboring terrain. Straight is possible, else left, else right,
+	 * else reverse.
+	 * 
+	 * @param theNeighbors The map of neighboring terrain.
+	 * @return The direction this car would like to move.
+	 */
+	@Override
+	public Direction chooseDirection(
+			final Map<Direction, Terrain> theNeighbors) {
+
+		// saved copy of the current direction
+		Direction carDir = getDirection();
+
+		// variables for the terrain types in each direction from current
+		// direction
+		final Terrain straightAhead = theNeighbors.get(carDir);
+		final Terrain toTheLeft = theNeighbors.get(carDir.left());
+		final Terrain toTheRight = theNeighbors.get(carDir.right());
+
+		// change direction when going straight is not possible
+		// if validTerrain == true then we maintain current direction
+		if (validTerrain(straightAhead) == false) {
+			// go left if can't go straight when terrain valid
+			if (validTerrain(toTheLeft)) {
+				carDir = carDir.left();
+				// if can't go straight or left, go right when valid
+			} else if (validTerrain(toTheRight)) {
+				carDir = carDir.right();
+				// all other options were not possible so reverse
+			} else {
+				carDir = carDir.reverse();
+			}
+		}
+
+		return carDir;
+	}
+
+	/**
+	 * Helper method for chooseDirections and canPass. Checks the passed Terrain
+	 * to see if it is a valid terrain type the car is allowed to move
+	 * through.
+	 * 
+	 * @param theTerrain The terrain.
+	 * @return True if terrain is valid, false if otherwise.
+	 */
+	private boolean validTerrain(final Terrain theTerrain) {
+		// cars can travel only on streets lights and crosswalks
+
+		boolean result = false;
+		if (theTerrain == Terrain.STREET || theTerrain == Terrain.LIGHT
+				|| theTerrain == Terrain.CROSSWALK) {
+			result = true;
+		}
+
+		return result;
+	}
+
+}

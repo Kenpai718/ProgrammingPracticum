@@ -1,0 +1,138 @@
+package model;
+
+/**
+ * Human subclass of Vehicle for assignment 2 for TCSS 305.
+ * Human has specific behavior for a vehicle.
+ * 
+ * @author Kenneth Ahrens
+ * @version Fall 2020
+ */
+
+import java.util.Map;
+
+public class Human extends AbstractVehicle {
+
+	/** Constant death time of this vehicle. */
+	private static final int DEATH_TIME = 45;
+
+	/**
+	 * Constructor to initialize all Human fields. Passes its info to
+	 * AbstractVehicle to eliminate redundancy.
+	 * 
+	 */
+	public Human(final int theX, final int theY, final Direction theDir) {
+		super(theX, theY, theDir, DEATH_TIME);
+
+	}
+
+	/**
+	 * Returns whether or not this object may move onto the given type of
+	 * terrain, when the street lights are the given color. A human can only
+	 * move through grass or crosswalks. Only passes on red light crosswalks.
+	 * 
+	 * @param theTerrain The terrain.
+	 * @param theLight   The light color.
+	 * @return whether or not this object may move onto the given type of
+	 *         terrain when the street lights are the given color.
+	 */
+	@Override
+	public boolean canPass(final Terrain theTerrain, final Light theLight) {
+		boolean result = false;
+		if (validTerrain(theTerrain)) {
+			result = true;
+
+			Boolean stopAtLight = ((theTerrain == Terrain.CROSSWALK)
+					&& (theLight == Light.GREEN));
+			if (stopAtLight) {
+				result = false;
+			}
+		}
+		return result;
+	}
+
+	/**
+	 * Returns the direction this object would like to move, based on the given
+	 * map of the neighboring terrain.
+	 * 
+	 * @param theNeighbors The map of neighboring terrain.
+	 * @return The direction this object would like to move.
+	 */
+	@Override
+	public Direction chooseDirection(
+			final Map<Direction, Terrain> theNeighbors) {
+		Direction humanDir = Direction.random();
+		final Direction originalDir = getDirection();
+		Terrain neighborTerrain = theNeighbors.get(humanDir);
+
+		Terrain terrainStraight = theNeighbors.get(originalDir);
+		Terrain terrainToLeft = theNeighbors.get(originalDir.left());
+		Terrain terrainToRight = theNeighbors.get(originalDir.right());
+
+		// 0 = straight, 1 = left, 2 = right
+		final Terrain[] nearbyTerrains = new Terrain[] { terrainStraight,
+				terrainToLeft, terrainToRight };
+
+		if (hasNearbyGrass(nearbyTerrains)
+				&& !hasNearbyCrosswalk(nearbyTerrains)) {
+
+			// randomly chooses a direction until a valid option is chosen
+			while (neighborTerrain != Terrain.GRASS
+					|| humanDir == getDirection().reverse()) {
+				humanDir = Direction.random();
+				neighborTerrain = theNeighbors.get(humanDir);
+			}
+
+			// as a last resort reverse
+		} else if (hasNearbyCrosswalk(nearbyTerrains)) {
+			// randomly chooses a direction until a valid option is chosen
+			while (neighborTerrain != Terrain.CROSSWALK
+					|| humanDir == getDirection().reverse()) {
+				humanDir = Direction.random();
+				neighborTerrain = theNeighbors.get(humanDir);
+			}
+		} else {
+			humanDir = originalDir.reverse();
+		}
+		return humanDir;
+	}
+
+	private boolean hasNearbyGrass(final Terrain[] theTerrains) {
+
+		for (Terrain t : theTerrains) {
+			if (t == Terrain.GRASS) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	private boolean hasNearbyCrosswalk(final Terrain[] theTerrains) {
+
+		for (Terrain t : theTerrains) {
+			if (t == Terrain.CROSSWALK) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * Helper method for chooseDirections and canPass. Checks the passed Terrain
+	 * to see if it is a valid terrain type the vehicle is allowed to move
+	 * through.
+	 * 
+	 * @param theTerrain The terrain.
+	 * @return True if terrain is valid, false if otherwise.
+	 */
+	private boolean validTerrain(final Terrain theTerrain) {
+		// human can only travel on grass or crosswalks
+
+		boolean result = false;
+		if (theTerrain == Terrain.GRASS || theTerrain == Terrain.CROSSWALK) {
+			result = true;
+		}
+
+		return result;
+	}
+
+}

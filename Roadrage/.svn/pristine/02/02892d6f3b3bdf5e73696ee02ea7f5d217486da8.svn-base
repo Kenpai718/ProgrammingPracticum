@@ -1,0 +1,78 @@
+package model;
+
+import java.util.Map;
+import java.util.TreeMap;
+
+public class Bicycle extends AbstractVehicle {
+
+	private static final int DEATH_TIME = 35;
+
+	public Bicycle(final int theX, final int theY, final Direction theDir) {
+		super(theX, theY, theDir, DEATH_TIME);
+
+	}
+
+	@Override
+	public boolean canPass(final Terrain theTerrain, final Light theLight) {
+		boolean result = false;
+		if (validTerrain(theTerrain)) {
+			result = true;
+
+			Boolean stopAtLight = (theTerrain == Terrain.LIGHT && theLight != Light.GREEN);
+			if (stopAtLight) {
+				result = false;
+			}
+		}
+		return result;
+	}
+
+	@Override
+	public Direction chooseDirection(final Map<Direction, Terrain> theNeighbors) {
+		// TODO Auto-generated method stub
+		Direction bikeDir = getDirection();
+
+		final Terrain straightAhead = theNeighbors.get(bikeDir);
+		final Terrain toTheLeft = theNeighbors.get(bikeDir.left());
+		final Terrain toTheRight = theNeighbors.get(bikeDir.right());
+
+		if (validTerrain(straightAhead)) {
+			boolean hasNearbyTrail = (straightAhead == Terrain.TRAIL
+					|| toTheLeft == Terrain.TRAIL
+					|| toTheRight == Terrain.TRAIL);
+
+			if (hasNearbyTrail) {
+				if (straightAhead == Terrain.STREET
+						&& toTheLeft == Terrain.TRAIL) {
+					bikeDir = bikeDir.left();
+				} else if (straightAhead == Terrain.STREET
+						&& toTheRight == Terrain.TRAIL) {
+					bikeDir = bikeDir.right();
+				}
+				// if it doesn't pass these statements it just keeps going the
+				// same direction that was set at the start of the method
+			}
+
+		} else if (validTerrain(toTheLeft)) {
+			bikeDir = bikeDir.left();
+		} else if (validTerrain(toTheRight)) {
+			bikeDir = bikeDir.right();
+		} else {
+			bikeDir = bikeDir.reverse();
+		}
+		return bikeDir;
+	}
+
+	private boolean validTerrain(final Terrain theTerrain) {
+		// truck can travel only on streets lights and crosswalks
+
+		boolean result = false;
+		if (theTerrain == Terrain.STREET || theTerrain == Terrain.LIGHT
+				|| theTerrain == Terrain.CROSSWALK
+				|| theTerrain == Terrain.TRAIL) {
+			result = true;
+		}
+
+		return result;
+	}
+
+}

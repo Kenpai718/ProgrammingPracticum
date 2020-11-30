@@ -1,0 +1,242 @@
+package model;
+
+import java.util.Map;
+
+/**
+ * Taxi subclass of Vehicle for assignment 2 for TCSS 305. Taxi has specific
+ * behavior for a vehicle. Very similar to Car subclass, with some small
+ * differences. 
+ * 
+ * @author Kenneth Ahrens
+ * @version Fall 2020
+ */
+
+public class Taxi extends AbstractVehicle {
+
+	// constants below
+
+	/** Constant death time of this vehicle. */
+	private static final int DEATH_TIME = 15;
+	/** Constant max clock cycle of this vehicle. */
+	private final int MAX_CYCLE = 3;
+	/** Constant starting time of clock cycle. */
+	private final int START_CYCLE = 0;
+
+	// instance fields below
+
+	/** Boolean for if the vehicle is stopped at a crosswalk */
+	private boolean myStop;
+
+	/**
+	 * Counter for how many clock cycles have passed while stopped at a red
+	 * crosswalk light
+	 */
+	private int myClockCycle;
+
+	/**
+	 * Stores the direction taxi was going before it was stopped at a crosswalk
+	 */
+	private Direction myStoppedDirection;
+
+	/**
+	 * Constructor to initialize all taxi fields. Passes its info to
+	 * AbstractVehicle to eliminate redundancy.
+	 * 
+	 */
+	public Taxi(final int theX, final int theY, final Direction theDir) {
+		super(theX, theY, theDir, DEATH_TIME);
+
+		myClockCycle = START_CYCLE;
+		myStop = false;
+	}
+
+	/**
+	 * Returns whether or not this object may move onto the given type of
+	 * terrain, when the street lights are the given color. A car can only move
+	 * through a street, light or crosswalk to pass. Can only drive through a
+	 * crosswalk light when green. Stop for red traffic lights, temporary stop
+	 * for red crosswalk.
+	 * 
+	 * @param theTerrain The terrain.
+	 * @param theLight   The light color.
+	 * @return whether or not this object may move onto the given type of
+	 *         terrain when the street lights are the given color.
+	 */
+	@Override
+	public boolean canPass(final Terrain theTerrain, final Light theLight) {
+
+		// will always be false unless set to true
+		boolean result = false;
+
+		// can always pass if its a street
+		if (theTerrain == Terrain.STREET) {
+			result = true;
+
+			// can pass a street light when its not red
+		} else if (theTerrain == Terrain.LIGHT && (theLight != Light.RED)) {
+			result = true;
+
+			// check if can pass crosswalk with certain light conditions
+		} else if (theTerrain == Terrain.CROSSWALK && !myStop) {
+
+			// myStop will become true when light = red
+			if (theLight == Light.RED) {
+				// result still false
+				setupClockCycle(); // intialize starting clock cycles
+
+				// else, light is either green or yellow so can pass
+			} else {
+				if (validTerrain(theTerrain)) {
+					result = true;
+				} // else result still false
+			}
+
+			// if stopped at a crosswalk, can only pass after waiting 3 clock
+			// cycles or if the light turns green
+		} else if (theTerrain == Terrain.CROSSWALK && myStop) {
+
+			boolean incompleteCycle = (myClockCycle != MAX_CYCLE);
+			boolean atRedLight = theLight == Light.RED;
+
+			// keep track of clock cycles when stopped
+			if (atRedLight && incompleteCycle) {
+				myClockCycle++;
+
+				// clock cycle has completed or light has turned green
+			} else {
+				// we can now pass so reset cycle
+				resetClockCycle();
+				if (validTerrain(theTerrain)) {
+					result = true;
+				} // else result still false
+			}
+		}
+
+		return result;
+	}
+
+	/**
+	 * Helper method for canPass. It resets clock cycle when the taxi was
+	 * stopped at a red crosswalk light but now can be moved.
+	 * 
+	 */
+	private void resetClockCycle() {
+		myStop = false;
+		myClockCycle = START_CYCLE;
+
+	}
+
+	/**
+	 * Helper method for canPass. It initialize all fields for when the taxi
+	 * must be stopped and wait for its clock cycle.
+	 * 
+	 */
+	private void setupClockCycle() {
+		myStop = true;
+		myStoppedDirection = getDirection();
+		myClockCycle = START_CYCLE;
+
+	}
+
+	/**
+	 * Returns the direction this object would like to move, based on the given
+	 * map of the neighboring terrain.
+	 * 
+	 * @param theNeighbors The map of neighboring terrain.
+	 * @return The direction this object would like to move.
+	 */
+	@Override
+	public Direction chooseDirection(
+			final Map<Direction, Terrain> theNeighbors) {
+		Direction taxiDir = getDirection();
+
+		final Terrain straightAhead = theNeighbors.get(taxiDir);
+		final Terrain toTheLeft = theNeighbors.get(taxiDir.left());
+		final Terrain toTheRight = theNeighbors.get(taxiDir.right());
+
+		// sets default direction for when stopped at a crosswalk
+		if (myStop) {
+			taxiDir = myStoppedDirection;
+		} else {
+
+			// change direction if going straight is not possible
+			if (validTerrain(straightAhead) == false) {
+				if (validTerrain(toTheLeft)) {
+					taxiDir = taxiDir.left();
+				} else if (validTerrain(toTheRight)) {
+					taxiDir = taxiDir.right();
+				} else {
+					taxiDir = taxiDir.reverse();
+				}
+			}
+		}
+
+		// maintain the same direction if taxi was stopped at a crosswalk
+
+		return taxiDir;
+	}
+
+	/**
+	 * Helper method for chooseDirections and canPass. Checks the passed Terrain
+	 * to see if it is a valid terrain type the vehicle is allowed to move
+	 * through.
+	 * 
+	 * @param theTerrain The terrain.
+	 * @return True if terrain is valid, false if otherwise.
+	 */
+	private boolean validTerrain(final Terrain theTerrain) {
+		// taxi can travel only on streets lights and crosswalks
+
+		boolean result = false;
+		if (theTerrain == Terrain.STREET || theTerrain == Terrain.LIGHT
+				|| theTerrain == Terrain.CROSSWALK) {
+			result = true;
+		}
+
+		return result;
+	}
+
+	/**
+	 * Formats how to represent a Taxi object in a string. Lists all important
+	 * to know fields and its current status. This is overidden since it has an
+	 * extra field in clock cycles that needs to be tracked for debugging.
+	 * 
+	 * @return String of Taxi object
+	 */
+	@Override
+	public String toString() {
+		final StringBuilder sb = new StringBuilder();
+
+		String name = getClass().getSimpleName();
+		// name of vehicle object
+		sb.append(name + ", ");
+
+		// cords of vehicle. If needed uncomment statement below
+		// sb.append("(" + getX() + "," + getY() + "), ");
+
+		// direction vehicle is currently moving in
+		sb.append(getDirection() + ", ");
+
+		// status based on myAlive state
+
+		if (isAlive()) {
+			sb.append("Alive. ");
+		} else {
+			sb.append("Dead: ");
+			// tell turns how many turns until it revives
+			sb.append(getDeathCounter() + "/" + getDeathTime());
+			sb.append(" turns until revived. ");
+
+		}
+
+		/*the following if statement is for debugging purposes and only possible because 
+		 */
+		if (myStop) {
+			sb.append("Stopped at crosswalk: ");
+			sb.append(myClockCycle + "/" + MAX_CYCLE + " cycles.");
+		}
+
+		return sb.toString();
+	}
+
+}
